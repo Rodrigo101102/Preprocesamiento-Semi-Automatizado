@@ -1,1 +1,251 @@
-git commit -m "Mensaje descriptivo del commit"
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preprocesamiento- Extracción de URL de columna Snapshot- </title>
+    <link rel="icon" type="image/png" href="icono.png">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f4f7;
+            color: #333;
+            margin: 0;
+            padding: 10px; /* Reduce el padding */
+        }
+        h1 {
+            text-align: center;
+            color: #007BFF;
+            font-size: 1.8em; /* Reduce el tamaño del título */
+        }
+        .container {
+            max-width: 700px; /* Reduce el tamaño máximo */
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px; /* Ajusta el padding */
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #file-input {
+            margin: 20px 0;
+            text-align: center;
+        }
+        input[type="file"] {
+            padding: 10px;
+            font-size: 1.1em;
+            margin: 20px 0;
+            border: 2px solid #007BFF;
+            border-radius: 5px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        button {
+            padding: 8px 16px; /* Reduce el padding del botón */
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+            font-size: 1em; /* Reduce el tamaño de la fuente */
+            transition: 0.3s;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        #loading {
+            display: none;
+            color: #007BFF;
+            text-align: center;
+            font-size: 1.2em;
+        }
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            color: #888;
+        }
+        #steps {
+            font-size: 1em; /* Ajusta el tamaño del texto en los pasos */
+            color: #555;
+            margin-top: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            width: 100%;
+        }
+        #download-btn {
+            display: none;
+            padding: 12px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em; /* Ajusta el tamaño del botón de descarga */
+            margin-top: 20px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            cursor: not-allowed; /* Deshabilitado por defecto */
+        }
+        #download-btn:hover {
+            background-color: #0056b3;
+        }
+        #error-message {
+            color: red;
+            text-align: center;
+            font-weight: bold;
+        }
+        /* Estilo para mostrar imágenes sin fondo */
+        .image-preview {
+            width: 100%;
+            max-width: 200px; /* Limita el tamaño máximo */
+            height: auto;
+            display: block;
+            margin: 20px auto;
+            background-color: transparent; /* Asegura que no haya un fondo detrás */
+        }
+        #processed-message {
+            text-align: center;
+            font-size: 1.2em;
+            color: green;
+            margin-top: 20px;
+        }
+        #step-3-message {
+            text-align: center;
+            font-size: 1.1em;
+            margin-top: 20px;
+            color: #007BFF;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Preprocesamiento- Extracción de URL de columna Snapshot</h1>
+
+        <!-- Paso 1: Descargar archivo de Revizto y mostrar imagen de Revizto -->
+        <div id="steps">
+            <p><strong>1. Descarga el archivo Excel desde Revizto.</strong></p>
+            <!-- Mostrar imagen de Revizto -->
+            <img id="revizto-preview" class="image-preview" src="logo_revizto.png" alt="Imagen de Revizto" />
+        </div>
+
+        <!-- Paso 2: Subir archivo Excel y mostrar imagen de Excel después del texto -->
+        <div id="steps">
+            <p><strong>2. Sube el archivo Excel aquí:</strong></p>
+            <img id="excel-preview" class="image-preview" src="logo_excel.png" alt="Imagen de Excel" />
+            <!-- Mostrar input para elegir archivo Excel en el centro -->
+            <input type="file" id="excel-file" accept=".xlsx, .xls" onchange="enableProcessButton()" />
+        </div>
+
+        <div id="loading">
+            <p>Cargando...</p>
+        </div>
+
+        <div id="error-message"></div>
+
+        <!-- Botón Procesar Excel centrado -->
+        <button id="process-btn" onclick="processExcel()" disabled>Procesar Excel</button>
+        
+        <!-- Botón Descargar Excel centrado (Deshabilitado inicialmente) -->
+        <button id="download-btn" onclick="downloadFile()" disabled>Descargar nuevo Excel</button>
+
+        <!-- Mensaje de éxito, solo visible cuando el archivo ha sido procesado -->
+        <div id="processed-message" style="display:none;">¡El archivo ha sido procesado correctamente!</div>
+
+        <!-- Paso 3: Mensaje para cargar en Power BI -->
+        <div id="step-3-message" style="display:none;">
+            <p><strong>3. El archivo Excel descargado, cárgalo en Power BI para visualizar el reporte actualizado.</strong></p>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 Jean Carlos Torres Ramos</p>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script>
+        let modifiedWorkbook;
+
+        // Habilitar el botón "Procesar Excel" al seleccionar un archivo
+        function enableProcessButton() {
+            const fileInput = document.getElementById('excel-file');
+            const processBtn = document.getElementById('process-btn');
+            if (fileInput.files.length > 0) {
+                processBtn.disabled = false; // Habilitar el botón de procesar
+            }
+        }
+
+        function processExcel() {
+            const fileInput = document.getElementById('excel-file');
+            const file = fileInput.files[0];
+            const errorMessage = document.getElementById('error-message');
+            const downloadBtn = document.getElementById('download-btn');
+            const loading = document.getElementById('loading');
+            const processedMessage = document.getElementById('processed-message');
+            const step3Message = document.getElementById('step-3-message');
+
+            if (!file) {
+                errorMessage.textContent = "Por favor, selecciona un archivo Excel válido.";
+                return;
+            }
+
+            loading.style.display = "block"; // Mostrar mensaje de carga
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = e.target.result;
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets["Raw Data"];
+                if (!sheet) {
+                    errorMessage.textContent = "La hoja 'Raw Data' no fue encontrada en el archivo.";
+                    loading.style.display = "none"; // Ocultar mensaje de carga
+                    return;
+                }
+
+                // Procesar los datos de la columna "Snapshot" (columna C)
+                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                for (let i = 1; i < rows.length; i++) {
+                    const cell = sheet[`C${i + 1}`]; // Columna C (Snapshot)
+                    if (cell && cell.l) {  // Verificar si hay un hipervínculo
+                        sheet[`C${i + 1}`] = { v: cell.l.Target, t: 's' }; // Reemplaza con la URL
+                    }
+                }
+
+                modifiedWorkbook = workbook;
+                downloadBtn.disabled = false; // Habilitar botón de descarga
+                downloadBtn.style.cursor = 'pointer'; // Cambiar el cursor a puntero
+                loading.style.display = "none"; // Ocultar mensaje de carga
+                processedMessage.style.display = "block"; // Mostrar mensaje de éxito
+                step3Message.style.display = "block"; // Mostrar mensaje de cargar en Power BI
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function downloadFile() {
+            if (!modifiedWorkbook) {
+                alert("No hay archivo para descargar.");
+                return;
+            }
+
+            const wbout = XLSX.write(modifiedWorkbook, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([wbout], { type: 'application/octet-stream' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = "Inmobiliaria_Modificado.xlsx";
+            link.click();
+        }
+    </script>
+
+</body>
+</html>
